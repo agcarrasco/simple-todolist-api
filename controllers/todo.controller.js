@@ -1,69 +1,117 @@
-let todoList = [
-  {
-    id: "1660c8d3-2291-4373-a283-78c06f0afdde",
-    details: "wake up",
-    isCompleted: false,
-  },
-  {
-    id: "b6a4d7d8-35f4-4f34-ad68-24ad5dad3606",
-    details: "brush teeth",
-    isCompleted: false,
-  },
-  {
-    id: "12be0529-f475-4f19-82e9-f7c070a28564",
-    details: "take a bath",
-    isCompleted: false,
-  },
-];
+const TodoItem = require("../models/TodoItem");
 
-exports.getAllTodoItems = (req, res) => {
-  res.json({
-    status: "success",
-    data: todoList,
-  });
-};
+exports.getAllTodoItems = async (req, res) => {
+  try {
+    const items = await TodoItem.find({});
 
-exports.createTodoItem = (req, res) => {
-  const { details } = req.body;
-  const item = { id: crypto.randomUUID(), details, isCompleted: false };
-  todoList.push(item);
-
-  res.json({ status: "success", data: item });
-};
-
-exports.getTodoItem = (req, res) => {
-  const { itemId } = req.params;
-
-  const items = todoList.filter((item) => item.id === itemId);
-
-  if (items.length === 0) {
-    res.json({ status: "success", data: [] });
-  } else {
-    res.json({ status: "success", data: items[0] });
+    res.status(200).json({
+      status: "success",
+      data: items,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed fetching all todo items",
+    });
   }
 };
 
-exports.updateTodoItem = (req, res) => {
-  const { itemId } = req.params;
-  const { details, isCompleted } = req.body;
+exports.createTodoItem = async (req, res) => {
+  try {
+    const { details } = req.body;
+    const item = new TodoItem({
+      details,
+      isCompleted: false,
+    });
 
-  let updatedItem = { details, isCompleted };
-  const updatedList = todoList.map((item) => {
-    if (item.id === itemId) {
-      item = updatedItem = { ...item, ...updatedItem };
-    }
-    return item;
-  });
-  todoList = updatedList;
-
-  res.json({ status: "success", data: { message: `Updated item ${itemId}` } });
+    const newItem = await item.save();
+    res.json({
+      status: "success",
+      data: newItem,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed creating new todo item",
+    });
+  }
 };
 
-exports.deleteTodoItem = (req, res) => {
-  const { itemId } = req.params;
+exports.getTodoItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const item = await TodoItem.findById(itemId);
+    res.json({ status: "success", data: item });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed fetching todo item",
+    });
+  }
+};
 
-  const updatedList = todoList.filter((item) => item.id !== itemId);
-  todoList = updatedList;
+exports.updateTodoItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { details, isCompleted } = req.body;
+    const item = await TodoItem.findById(itemId);
 
-  res.json({ status: "success", data: { message: `Deleted item ${itemId}` } });
+    if (!item) {
+      return res.status(404).send({
+        status: "fail",
+        message: "Todo item not found",
+      });
+    }
+
+    if (details !== undefined) {
+      item.details = details;
+    }
+
+    if (isCompleted !== undefined) {
+      item.isCompleted = isCompleted;
+    }
+
+    await item.save();
+
+    res.status(200).send({
+      status: "success",
+      message: "Todo item successfully updated.",
+      data: item,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed updating todo item",
+    });
+  }
+};
+
+exports.deleteTodoItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const item = await TodoItem.findByIdAndDelete(itemId);
+
+    if (!item) {
+      return res.status(404).send({
+        status: "fail",
+        message: "Todo item not found",
+      });
+    }
+
+    res.status(200).send({
+      status: "success",
+      message: "Todo item successfully deleted.",
+      data: item,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed deleting todo item",
+    });
+  }
 };
