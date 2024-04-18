@@ -2,7 +2,14 @@ const TodoItem = require("../models/TodoItem");
 
 exports.getAllTodoItems = async (req, res) => {
   try {
-    const items = await TodoItem.find({});
+    const { isCompleted } = req.query;
+
+    const query = {};
+    if (isCompleted !== undefined) {
+      query.isCompleted = isCompleted === "true";
+    }
+
+    const items = await TodoItem.find(query);
 
     res.status(200).json({
       status: "success",
